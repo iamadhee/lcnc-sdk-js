@@ -68,8 +68,9 @@ export class EventBase {
 
 	_removeEventListener(eventName: string, callBack?: any) {
 		if (callBack) {
-			let index = this.#listeners[eventName].findIndex(callBack);
-			index > -1 && this.#listeners[eventName].splice(index, 1);
+			const listeners = this.#listeners[eventName] || [];
+			const index = listeners.indexOf(callBack);
+			index > -1 && listeners.splice(index, 1);
 			return;
 		}
 		Reflect.deleteProperty(this.#listeners, eventName);

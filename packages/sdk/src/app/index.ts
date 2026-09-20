@@ -5,7 +5,7 @@ import { CreateProxy } from "../core/proxy";
 import { Page } from "./page";
 
 import { AppContext } from "../types/internal";
-import { rolesObject } from "../types/external";
+import { rolesObject, RunEnvelope, RunWatchError } from "../types/external";
 
 import { DecisionTable } from "./decisiontable";
 import { Dataform } from "../dataform";
@@ -47,32 +47,79 @@ export class Application extends BaseSDK {
 		});
 	}
 
-	runFunction(name: string, parameters?: object) {
+	/**
+	 * Run a published Custom Function by name.
+	 *
+	 * An Interactive function resolves with its terminal envelope. A Background
+	 * function resolves as soon as it is queued, with `Status: "Queued"` and a
+	 * `RunId`; use {@link getRun} or {@link onRunComplete} for its result.
+	 *
+	 * @example
+	 * const run = await kf.app.runFunction("review_expense_claim", { claimId });
+	 */
+	runFunction(name: string, parameters?: Record<string, unknown>): Promise<RunEnvelope> {
 		return this._postMessageAsync(LISTENER_CMDS.CUSTOM_FUNCTION_RUN, {
 			name,
 			parameters: parameters ?? {}
-		});
+		}) as Promise<RunEnvelope>;
 	}
 
-	getRun(runId: string) {
+	/**
+	 * Fetch a run's current state, including its `Result` once it has one.
+	 *
+	 * @example
+	 * const run = await kf.app.getRun(runId);
+	 * if (run.Status === "Success") use(run.Result);
+	 */
+	getRun(runId: string): Promise<RunEnvelope> {
 		return this._postMessageAsync(LISTENER_CMDS.CUSTOM_FUNCTION_GET_RUN, {
 			runId
-		});
+		}) as Promise<RunEnvelope>;
 	}
 
-	onRunComplete(runId: string, callBack: (run: any) => any) {
+	/**
+	 * Be told when a Background run reaches a terminal state.
+	 *
+	 * Fires `callBack` once with the run's envelope. If the host cannot watch
+	 * the run at all, `onError` is called instead of `callBack` ever firing.
+	 *
+	 * Returns a function that unsubscribes. The callback lives only as long as
+	 * the script that registered it: form events end their script after 60 s
+	 * and a page event ends the previous one when it fires again, while a
+	 * Background run may take up to 600 s. Prefer polling {@link getRun} from a
+	 * script that outlives the run, or re-attach after the script restarts.
+	 *
+	 * @example
+	 * const stop = kf.app.onRunComplete(run.RunId, (done) => show(done), (err) => warn(err));
+	 * // later, e.g. on unmount
+	 * stop();
+	 */
+	onRunComplete(
+		runId: string,
+		callBack: (run: RunEnvelope) => void,
+		onError?: (error: RunWatchError) => void
+	): () => void {
+		const eventName = `${EVENT_TYPES.CUSTOM_FUNCTION_RUN_COMPLETE}:${runId}`;
+		const listener = (params: RunEnvelope | (RunWatchError & { isError: true })) => {
+			if (params && (params as { isError?: boolean }).isError) {
+				onError?.(params as RunWatchError);
+				return;
+			}
+			callBack(params as RunEnvelope);
+		};
 		this._postMessage(
 			LISTENER_CMDS.CUSTOM_FUNCTION_ON_RUN_COMPLETE,
 			{
 				id: this._id,
 				runId,
-				eventName: `${EVENT_TYPES.CUSTOM_FUNCTION_RUN_COMPLETE}:${runId}`,
+				eventName,
 				eventConfig: {
 					once: true
 				}
 			},
-			callBack
+			listener
 		);
+		return () => this._removeEventListener(eventName, listener);
 	}
 
 	getDecisionTable(flowId: string): DecisionTable {
