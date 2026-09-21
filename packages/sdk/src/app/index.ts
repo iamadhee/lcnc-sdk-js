@@ -54,6 +54,9 @@ export class Application extends BaseSDK {
 	 * function resolves as soon as it is queued, with `Status: "Queued"` and a
 	 * `RunId`; use {@link getRun} or {@link onRunComplete} for its result.
 	 *
+	 * A refused run rejects with the platform's SDK error shape: the message
+	 * text is in `error` and the code (`KISSFLOW_ERROR_…`) in `errorCode`.
+	 *
 	 * @example
 	 * const run = await kf.app.runFunction("review_expense_claim", { claimId });
 	 */

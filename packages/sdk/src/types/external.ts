@@ -348,7 +348,7 @@ export type RunStatus = "Queued" | "Running" | "Success" | "Failed" | "TimedOut"
 export type RunEnvelope = {
 	RunId: string;
 	Status: RunStatus;
-	Result?: unknown;
+	Result?: Record<string, unknown>;
 	Error?: { Code?: string; Message: string };
 };
 
