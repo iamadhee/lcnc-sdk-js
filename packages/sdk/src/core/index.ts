@@ -46,6 +46,9 @@ function onMessage(event) {
 		if (req?._id) {
 			let targetInstance = globalInstances[req._id];
 			targetInstance._dispatchMessageEvents(req, resp);
+			// One request, one reply: the entry _postMessageAsync added is spent.
+			// Instances keep their own key, which is an app/page/component id, never a request id.
+			Reflect.deleteProperty(globalInstances, req._id);
 		}
 	}
 }
