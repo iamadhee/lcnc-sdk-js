@@ -94,7 +94,7 @@ export class Application extends BaseSDK {
 	 *
 	 * @example
 	 * const stop = kf.app.onRunComplete(run.RunId, (done) => show(done), (err) => warn(err));
-	 * // later, e.g. on unmount
+	 * // later, e.g. on unmount — the host stops watching the run too
 	 * stop();
 	 */
 	onRunComplete(
@@ -122,7 +122,10 @@ export class Application extends BaseSDK {
 			},
 			listener
 		);
-		return () => this._removeEventListener(eventName, listener);
+		return () => {
+			this._removeEventListener(eventName, listener);
+			this._postMessage(LISTENER_CMDS.CUSTOM_FUNCTION_STOP_WATCH, { id: this._id, runId, eventName });
+		};
 	}
 
 	getDecisionTable(flowId: string): DecisionTable {
