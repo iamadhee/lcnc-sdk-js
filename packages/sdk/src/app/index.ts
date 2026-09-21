@@ -57,6 +57,10 @@ export class Application extends BaseSDK {
 	 * A refused run rejects with the platform's SDK error shape: the message
 	 * text is in `error` and the code (`KISSFLOW_ERROR_…`) in `errorCode`.
 	 *
+	 * Custom Functions are application-scoped: this is reachable from page,
+	 * component and flow event scripts that run inside an application, where
+	 * `kf.app` exists. There is no `kf.app` outside one.
+	 *
 	 * @example
 	 * const run = await kf.app.runFunction("review_expense_claim", { claimId });
 	 */
@@ -103,7 +107,7 @@ export class Application extends BaseSDK {
 		onError?: (error: RunWatchError) => void
 	): () => void {
 		const eventName = `${EVENT_TYPES.CUSTOM_FUNCTION_RUN_COMPLETE}:${runId}`;
-		const listener = (params: RunEnvelope | (RunWatchError & { isError: true })) => {
+		const listener = (params: RunEnvelope | RunWatchError) => {
 			if (params && (params as { isError?: boolean }).isError) {
 				onError?.(params as RunWatchError);
 				return;

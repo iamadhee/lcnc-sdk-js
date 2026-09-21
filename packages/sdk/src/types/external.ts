@@ -348,9 +348,13 @@ export type RunStatus = "Queued" | "Running" | "Success" | "Failed" | "TimedOut"
 export type RunEnvelope = {
 	RunId: string;
 	Status: RunStatus;
-	Result?: Record<string, unknown>;
+	/** Whatever the function returned. Only constrained when its output contract names properties. */
+	Result?: unknown;
 	Error?: { Code?: string; Message: string };
 };
 
-/** What `onRunComplete`'s error callback receives when the host could not watch the run. */
-export type RunWatchError = { message: string; error?: unknown; errorCode?: string };
+/**
+ * What `onRunComplete`'s error callback receives when the host could not watch the run.
+ * `error` carries the text; `errorCode` is the platform code when the failure was an API answer.
+ */
+export type RunWatchError = { isError: true; error?: string; errorCode?: string };
