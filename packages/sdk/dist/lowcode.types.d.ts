@@ -710,7 +710,7 @@ declare class Application {
          *
          * An Interactive function resolves with its terminal envelope. A Background
          * function resolves as soon as it is queued, with `Status: "Queued"` and a
-         * `RunId`; use {@link getRun} or {@link onRunComplete} for its result.
+         * `RunId`; use {@link getFunctionRun} or {@link onFunctionRunComplete} for its result.
          *
          * A refused run rejects with the platform's SDK error shape: the message
          * text is in `error` and the code (`KISSFLOW_ERROR_…`) in `errorCode`.
@@ -727,28 +727,31 @@ declare class Application {
          * Fetch a run's current state, including its `Result` once it has one.
          *
          * @example
-         * const run = await kf.app.getRun(runId);
+         * const run = await kf.app.getFunctionRun(runId);
          * if (run.Status === "Success") use(run.Result);
          */
-        getRun(runId: string): Promise<RunEnvelope>; 
+        getFunctionRun(runId: string): Promise<RunEnvelope>; 
 	/**
          * Be told when a Background run reaches a terminal state.
          *
-         * Fires `callBack` once with the run's envelope. If the host cannot watch
-         * the run at all, `onError` is called instead of `callBack` ever firing.
+         * Fires `callBack` once with the run's envelope. "Complete" means the run
+         * stopped, not that it worked: it fires on `Failed` and `TimedOut` just as
+         * it does on `Success`, so read `Status` before trusting `Result`. If the
+         * host cannot watch the run at all, `onError` is called instead of
+         * `callBack` ever firing.
          *
          * Returns a function that unsubscribes. The callback lives only as long as
          * the script that registered it: form events end their script after 60 s
          * and a page event ends the previous one when it fires again, while a
-         * Background run may take up to 600 s. Prefer polling {@link getRun} from a
+         * Background run may take up to 600 s. Prefer polling {@link getFunctionRun} from a
          * script that outlives the run, or re-attach after the script restarts.
          *
          * @example
-         * const stop = kf.app.onRunComplete(run.RunId, (done) => show(done), (err) => warn(err));
+         * const stop = kf.app.onFunctionRunComplete(run.RunId, (done) => show(done), (err) => warn(err));
          * // later, e.g. on unmount — the host stops watching the run too
          * stop();
          */
-        onRunComplete(runId: string, callBack: (run: RunEnvelope) => void, onError?: (error: RunWatchError) => void): () => void; 
+        onFunctionRunComplete(runId: string, callBack: (run: RunEnvelope) => void, onError?: (error: RunWatchError) => void): () => void; 
 	getDecisionTable(flowId: string): DecisionTable; 
 	getDataform(flowId: string): Dataform; 
 	getBoard(flowId: string): Board; 
@@ -1147,7 +1150,7 @@ declare type RunStatus = "Queued" | "Running" | "Success" | "Failed" | "TimedOut
  *
  * An Interactive function resolves with the terminal envelope directly. A
  * Background function resolves with `Queued` and only `RunId`; fetch the rest
- * with `getRun`, or wait for it with `onRunComplete`.
+ * with `getFunctionRun`, or wait for it with `onFunctionRunComplete`.
  */
 declare type RunEnvelope = {
 	RunId: string;
@@ -1158,7 +1161,7 @@ declare type RunEnvelope = {
 };
 
 /**
- * What `onRunComplete`'s error callback receives when the host could not watch the run.
+ * What `onFunctionRunComplete`'s error callback receives when the host could not watch the run.
  * `error` carries the text; `errorCode` is the platform code when the failure was an API answer.
  */
 declare type RunWatchError = { isError: true; error?: string; errorCode?: string };

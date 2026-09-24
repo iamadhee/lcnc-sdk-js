@@ -165,6 +165,7 @@ function generateId(prefix = "lcncsdk") {
   return `${prefix}-${nanoid()}`;
 }
 const globalInstances = {};
+const pendingRequestIds = /* @__PURE__ */ new Set();
 function processResponse(req, resp) {
   if (resp && Object.keys(resp).length === 1 && req.command !== LISTENER_CMDS.API) {
     let value = Object.values(resp)[0];
@@ -197,8 +198,12 @@ function onMessage(event) {
     let { _req: req, resp } = data;
     if (req == null ? void 0 : req._id) {
       let targetInstance = globalInstances[req._id];
-      targetInstance._dispatchMessageEvents(req, resp);
-      Reflect.deleteProperty(globalInstances, req._id);
+      if (targetInstance) {
+        targetInstance._dispatchMessageEvents(req, resp);
+        if (pendingRequestIds.delete(req._id)) {
+          Reflect.deleteProperty(globalInstances, req._id);
+        }
+      }
     }
   }
 }
@@ -253,6 +258,7 @@ class BaseSDK extends EventBase {
       const _id = generateId(command.toLowerCase());
       postMessage({ _id, command, ...args });
       globalInstances[_id] = this;
+      pendingRequestIds.add(_id);
       this._addEventListener(_id, async (data) => {
         if ((data == null ? void 0 : data.errorMessage) || (data == null ? void 0 : data.isError)) {
           reject(data);
@@ -1405,12 +1411,12 @@ class Application extends BaseSDK {
       parameters: parameters != null ? parameters : {}
     });
   }
-  getRun(runId) {
+  getFunctionRun(runId) {
     return this._postMessageAsync(LISTENER_CMDS.CUSTOM_FUNCTION_GET_RUN, {
       runId
     });
   }
-  onRunComplete(runId, callBack, onError) {
+  onFunctionRunComplete(runId, callBack, onError) {
     const eventName = `${EVENT_TYPES.CUSTOM_FUNCTION_RUN_COMPLETE}:${runId}`;
     const listener = (params) => {
       if (params && params.isError) {

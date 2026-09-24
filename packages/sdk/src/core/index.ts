@@ -6,6 +6,10 @@ export function generateId(prefix = "lcncsdk") {
 	return `${prefix}-${nanoid()}`;
 }
 export const globalInstances = {};
+// Ids _postMessageAsync registered, so cleanup only ever removes entries it made.
+// Instances register themselves here too, under ids from the same generator
+// (see window/NDEFReader), so the key alone cannot tell the two apart.
+const pendingRequestIds = new Set<string>();
 
 function processResponse(req: object, resp: object) {
 	if (
@@ -45,10 +49,16 @@ function onMessage(event) {
 		let { _req: req, resp } = data;
 		if (req?._id) {
 			let targetInstance = globalInstances[req._id];
-			targetInstance._dispatchMessageEvents(req, resp);
-			// One request, one reply: the entry _postMessageAsync added is spent.
-			// Instances keep their own key, which is an app/page/component id, never a request id.
-			Reflect.deleteProperty(globalInstances, req._id);
+			// Only _postMessageAsync registers an entry, and only the first reply finds it:
+			// a late or duplicate reply, or any reply to a _postMessage command, has none.
+			// Dispatching without this check turns those into a TypeError in the one message
+			// listener every consumer shares.
+			if (targetInstance) {
+				targetInstance._dispatchMessageEvents(req, resp);
+				if (pendingRequestIds.delete(req._id)) {
+					Reflect.deleteProperty(globalInstances, req._id);
+				}
+			}
 		}
 	}
 }
@@ -117,6 +127,7 @@ export class BaseSDK extends EventBase {
 			postMessage({ _id, command, ...args });
 
 			globalInstances[_id] = this;
+			pendingRequestIds.add(_id);
 
 			this._addEventListener(_id, async (data: any) => {
 				if (data?.errorMessage || data?.isError) {

@@ -343,7 +343,7 @@ export type RunStatus = "Queued" | "Running" | "Success" | "Failed" | "TimedOut"
  *
  * An Interactive function resolves with the terminal envelope directly. A
  * Background function resolves with `Queued` and only `RunId`; fetch the rest
- * with `getRun`, or wait for it with `onRunComplete`.
+ * with `getFunctionRun`, or wait for it with `onFunctionRunComplete`.
  */
 export type RunEnvelope = {
 	RunId: string;
@@ -354,7 +354,7 @@ export type RunEnvelope = {
 };
 
 /**
- * What `onRunComplete`'s error callback receives when the host could not watch the run.
+ * What `onFunctionRunComplete`'s error callback receives when the host could not watch the run.
  * `error` carries the text; `errorCode` is the platform code when the failure was an API answer.
  */
 export type RunWatchError = { isError: true; error?: string; errorCode?: string };
