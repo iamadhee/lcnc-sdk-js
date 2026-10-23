@@ -39,6 +39,11 @@ jobs:
             - name: Run build
               run: pnpm run build:sdk
 
+            # Every bundle the package ships must exist before anything else runs against dist/.
+            - name: Check bundles
+              working-directory: packages/sdk
+              run: ls dist/kfsdk.es.js dist/kfsdk.umd.js dist/kf.lowcodeworkersdk.es.js dist/kf.nocodeworkersdk.es.js
+
             # The tests run against the build above, so a broken bundle is never published.
             - name: Run tests
               working-directory: packages/sdk
