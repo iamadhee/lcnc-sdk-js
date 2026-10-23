@@ -1,5 +1,6 @@
 import { build } from 'vite'
 import * as path from 'path';
+import { rmSync } from 'fs';
 
 const libraryModules = [
   {
@@ -21,12 +22,24 @@ const libraryModules = [
   },
 ];
 
+// Empty dist/ once here; every build below must leave the others' output alone.
+rmSync(path.resolve(__dirname, "dist"), { recursive: true, force: true });
 
-libraryModules.forEach(async function test(libConfig) {
-  await build({
-    configFile: false,
-    build: {
-      lib: libConfig
-    }
-  })
-});
+(async () => {
+  for (const libConfig of libraryModules) {
+    await build({
+      configFile: false,
+      build: {
+        lib: libConfig,
+        emptyOutDir: false,
+      }
+    });
+  }
+})();
+
+// `vite build` loads this file and then builds index.html with this config.
+export default {
+  build: {
+    emptyOutDir: false,
+  },
+};
